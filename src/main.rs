@@ -134,16 +134,14 @@ fn advance_year(keys: Res<ButtonInput<KeyCode>>, mut state: ResMut<State>) {
 }
 
 fn set_visibility(mut query: Query<&mut Visibility, With<LayerMarker>>, state: Res<State>) {
-    if state.is_changed() {
-        for (year, sprite, is_active) in state.sprites.iter() {
-            let Ok(mut vis) = query.get_mut(*sprite) else {
-                continue;
-            };
-            if *year <= state.current_year && *is_active {
-                *vis = Visibility::Visible;
-            } else {
-                *vis = Visibility::Hidden;
-            }
+    for (year, sprite, is_active) in state.sprites.iter() {
+        let Ok(mut vis) = query.get_mut(*sprite) else {
+            continue;
+        };
+        if *year <= state.current_year && *is_active {
+            *vis = Visibility::Visible;
+        } else {
+            *vis = Visibility::Hidden;
         }
     }
 }
