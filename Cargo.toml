@@ -7,6 +7,7 @@ edition = "2024"
 bevy = "0.16.0"
 bevy_egui = "0.34.1"
 egui = "0.31.1"
+egui_extras = "0.31.1"
 
 # Enable code optimization in debug
 [profile.dev]

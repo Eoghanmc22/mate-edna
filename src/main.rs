@@ -1,14 +1,17 @@
 //! TODO: Option to input data as full table
 //! TODO: Maybe option to change start and end years?
 
+use std::{collections::HashSet, iter};
+
 use bevy::{asset::AssetMetaCheck, prelude::*, window::WindowResized};
 use bevy_egui::{EguiContexts, EguiPlugin};
-use egui::widgets::DragValue;
+use egui::{WidgetText, widgets::DragValue};
+use egui_extras::{Column, TableBuilder};
 
 #[derive(Resource)]
 pub struct State {
-    // transition_year, sprite entity, is_active
-    sprites: Vec<(u32, Entity, bool)>,
+    // active_years, sprite entity
+    sprites: Vec<(HashSet<u32>, Entity)>,
     start_year: u32,
     end_year: u32,
     current_year: u32,
@@ -45,6 +48,9 @@ fn main() {
 }
 
 fn setup(mut cmds: Commands, server: Res<AssetServer>) {
+    let names = [
+        "Base Map", "Region 1", "Region 2", "Region 3", "Region 4", "Region 5",
+    ];
     let paths = [
         "base.png",
         "region1.png",
@@ -54,15 +60,15 @@ fn setup(mut cmds: Commands, server: Res<AssetServer>) {
         "region5.png",
     ];
 
-    let start_year = 2016;
-    let end_year = 2025;
+    let start_year = 2016u32;
+    let end_year = 2025u32;
 
     let mut sprites = vec![];
 
-    for (idx, path) in paths.into_iter().enumerate() {
+    for (idx, (name, path)) in iter::zip(names, paths).enumerate() {
         let sprite = cmds
             .spawn((
-                Name::new(path),
+                Name::new(name),
                 Sprite {
                     image: server.load(path),
                     ..default()
@@ -72,7 +78,7 @@ fn setup(mut cmds: Commands, server: Res<AssetServer>) {
             ))
             .id();
 
-        sprites.push((start_year, sprite, true));
+        sprites.push((HashSet::from_iter(start_year..=end_year), sprite));
     }
 
     cmds.insert_resource(State {
@@ -92,7 +98,7 @@ fn setup(mut cmds: Commands, server: Res<AssetServer>) {
     ));
 }
 
-fn show_ui(mut ctx: EguiContexts, mut state: ResMut<State>) {
+fn show_ui(mut ctx: EguiContexts, mut state: ResMut<State>, name_query: Query<&Name>) {
     // Reborrow trick to work around deref borrowing the whole struct
     let state = &mut *state;
 
@@ -104,16 +110,82 @@ fn show_ui(mut ctx: EguiContexts, mut state: ResMut<State>) {
             );
         });
 
-        ui.collapsing("Data", |ui| {
-            for (idx, (year, _, is_active)) in state.sprites[1..].iter_mut().enumerate() {
+        ui.collapsing("Coarse Data", |ui| {
+            for (idx, (years, ..)) in state.sprites[1..].iter_mut().enumerate() {
                 ui.horizontal(|ui| {
-                    ui.checkbox(is_active, "");
-                    ui.add_enabled_ui(*is_active, |ui| {
+                    let mut is_active = !years.is_empty();
+
+                    ui.checkbox(&mut is_active, WidgetText::default());
+
+                    if is_active && years.is_empty() {
+                        *years = HashSet::from_iter(state.start_year..=state.end_year);
+                    }
+
+                    ui.add_enabled_ui(is_active, |ui| {
+                        let mut year = years.iter().min().copied().unwrap_or(state.start_year);
+
                         ui.label(format!("Region {} Year: ", idx + 1));
-                        ui.add(DragValue::new(year).range(state.start_year..=state.end_year));
+                        let res = ui.add(
+                            DragValue::new(&mut year).range(state.start_year..=state.end_year),
+                        );
+
+                        if res.changed() {
+                            *years = HashSet::from_iter(year..=state.end_year);
+                        }
                     });
                 });
             }
+        });
+
+        ui.collapsing("Fine Data", |ui| {
+            TableBuilder::new(ui)
+                .vscroll(false)
+                .column(Column::auto())
+                .columns(Column::auto(), state.sprites.len() - 1)
+                .header(20.0, |mut ui| {
+                    ui.col(|ui| {
+                        ui.label("Year");
+                    });
+
+                    for (_years, entity) in &state.sprites[1..] {
+                        ui.col(|ui| {
+                            ui.label(
+                                name_query
+                                    .get(*entity)
+                                    .map(|it| it.as_str())
+                                    .unwrap_or("Unknown"),
+                            );
+                        });
+                    }
+                })
+                .body(|mut ui| {
+                    for year in state.start_year..=state.end_year {
+                        ui.row(20.0, |mut ui| {
+                            ui.col(|ui| {
+                                ui.label(format!("{year}"));
+                            });
+
+                            for (years, _entity) in &mut state.sprites[1..] {
+                                ui.col(|ui| {
+                                    let was_shown = years.contains(&year);
+                                    let mut shown = was_shown;
+
+                                    ui.centered_and_justified(|ui| {
+                                        ui.checkbox(&mut shown, WidgetText::default());
+                                    });
+
+                                    if shown != was_shown {
+                                        if shown {
+                                            years.insert(year);
+                                        } else {
+                                            years.remove(&year);
+                                        }
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
         });
     });
 }
@@ -134,11 +206,11 @@ fn advance_year(keys: Res<ButtonInput<KeyCode>>, mut state: ResMut<State>) {
 }
 
 fn set_visibility(mut query: Query<&mut Visibility, With<LayerMarker>>, state: Res<State>) {
-    for (year, sprite, is_active) in state.sprites.iter() {
+    for (years, sprite) in state.sprites.iter() {
         let Ok(mut vis) = query.get_mut(*sprite) else {
             continue;
         };
-        if *year <= state.current_year && *is_active {
+        if years.contains(&state.current_year) {
             *vis = Visibility::Visible;
         } else {
             *vis = Visibility::Hidden;
