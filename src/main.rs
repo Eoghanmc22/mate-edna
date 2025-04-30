@@ -61,7 +61,13 @@ fn setup(mut cmds: Commands, server: Res<AssetServer>) {
         end_year: 2025,
     });
 
-    cmds.spawn(Camera2d);
+    cmds.spawn((
+        Camera2d,
+        Camera {
+            clear_color: ClearColorConfig::Custom(Color::WHITE),
+            ..default()
+        },
+    ));
 }
 
 fn show_ui(mut ctx: EguiContexts, mut state: ResMut<State>) {
