@@ -1,6 +1,3 @@
-//! TODO: Option to input data as full table
-//! TODO: Maybe option to change start and end years?
-
 use std::{collections::HashSet, iter};
 
 use bevy::{asset::AssetMetaCheck, prelude::*, window::WindowResized};
