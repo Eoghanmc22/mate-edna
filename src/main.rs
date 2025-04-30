@@ -1,8 +1,7 @@
-//! TODO: Scale sprites to min window axis
 //! TODO: Option to input data as full table
 //! TODO: Maybe option to change start and end years?
 
-use bevy::{asset::AssetMetaCheck, ecs::query::QueryData, prelude::*, window::WindowResized};
+use bevy::{asset::AssetMetaCheck, prelude::*, window::WindowResized};
 use bevy_egui::{EguiContexts, EguiPlugin};
 use egui::widgets::DragValue;
 
@@ -56,6 +55,8 @@ fn setup(mut cmds: Commands, server: Res<AssetServer>) {
     ];
 
     let start_year = 2016;
+    let end_year = 2025;
+
     let mut sprites = vec![];
 
     for (idx, path) in paths.into_iter().enumerate() {
@@ -78,7 +79,7 @@ fn setup(mut cmds: Commands, server: Res<AssetServer>) {
         sprites,
         start_year,
         current_year: start_year,
-        end_year: 2025,
+        end_year,
     });
 
     cmds.spawn((
@@ -92,10 +93,15 @@ fn setup(mut cmds: Commands, server: Res<AssetServer>) {
 }
 
 fn show_ui(mut ctx: EguiContexts, mut state: ResMut<State>) {
+    // Reborrow trick to work around deref borrowing the whole struct
+    let state = &mut *state;
+
     egui::Window::new("Data").show(ctx.ctx_mut(), |ui| {
         ui.horizontal(|ui| {
             ui.label("Current Year: ");
-            ui.add(DragValue::new(&mut state.current_year).range(2016..=2025));
+            ui.add(
+                DragValue::new(&mut state.current_year).range(state.start_year..=state.end_year),
+            );
         });
 
         ui.collapsing("Data", |ui| {
@@ -104,7 +110,7 @@ fn show_ui(mut ctx: EguiContexts, mut state: ResMut<State>) {
                     ui.checkbox(is_active, "");
                     ui.add_enabled_ui(*is_active, |ui| {
                         ui.label(format!("Region {} Year: ", idx + 1));
-                        ui.add(DragValue::new(year).range(2016..=2025));
+                        ui.add(DragValue::new(year).range(state.start_year..=state.end_year));
                     });
                 });
             }
