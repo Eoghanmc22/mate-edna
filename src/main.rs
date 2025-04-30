@@ -1,3 +1,7 @@
+//! TODO: Scale sprites to min window axis
+//! TODO: Option to input data as full table
+//! TODO: Maybe option to change start and end years?
+
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, EguiPlugin};
 use egui::widgets::DragValue;
