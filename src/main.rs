@@ -2,7 +2,7 @@
 //! TODO: Option to input data as full table
 //! TODO: Maybe option to change start and end years?
 
-use bevy::{asset::AssetMetaCheck, prelude::*};
+use bevy::{asset::AssetMetaCheck, ecs::query::QueryData, prelude::*, window::WindowResized};
 use bevy_egui::{EguiContexts, EguiPlugin};
 use egui::widgets::DragValue;
 
@@ -38,7 +38,10 @@ fn main() {
             },
         ))
         .add_systems(Startup, setup)
-        .add_systems(Update, (show_ui, advance_year, set_visibility))
+        .add_systems(
+            Update,
+            (show_ui, advance_year, set_visibility, adjust_scale),
+        )
         .run();
 }
 
@@ -135,6 +138,18 @@ fn set_visibility(mut query: Query<&mut Visibility, With<LayerMarker>>, state: R
             } else {
                 *vis = Visibility::Hidden;
             }
+        }
+    }
+}
+
+fn adjust_scale(
+    mut resize_events: EventReader<WindowResized>,
+    mut query: Query<&mut Sprite, With<LayerMarker>>,
+) {
+    for event in resize_events.read() {
+        for mut sprite in query.iter_mut() {
+            let size = event.width.min(event.height);
+            sprite.custom_size = Some(Vec2::splat(size));
         }
     }
 }
