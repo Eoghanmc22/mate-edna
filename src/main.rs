@@ -44,13 +44,15 @@ fn setup(mut cmds: Commands, server: Res<AssetServer>) {
     let start_year = 2016;
     let mut sprites = vec![];
 
-    for path in paths {
+    for (idx, path) in paths.into_iter().enumerate() {
         let sprite = cmds
             .spawn((
+                Name::new(path),
                 Sprite {
                     image: server.load(path),
                     ..default()
                 },
+                Transform::from_xyz(0.0, 0.0, idx as f32),
                 LayerMarker,
             ))
             .id();
@@ -71,6 +73,7 @@ fn setup(mut cmds: Commands, server: Res<AssetServer>) {
             clear_color: ClearColorConfig::Custom(Color::WHITE),
             ..default()
         },
+        Transform::from_xyz(0.0, 0.0, 100.0),
     ));
 }
 
