@@ -2,7 +2,7 @@
 //! TODO: Option to input data as full table
 //! TODO: Maybe option to change start and end years?
 
-use bevy::prelude::*;
+use bevy::{asset::AssetMetaCheck, prelude::*};
 use bevy_egui::{EguiContexts, EguiPlugin};
 use egui::widgets::DragValue;
 
@@ -21,7 +21,10 @@ pub struct LayerMarker;
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins,
+            DefaultPlugins.set(AssetPlugin {
+                meta_check: AssetMetaCheck::Never,
+                ..default()
+            }),
             EguiPlugin {
                 enable_multipass_for_primary_context: false,
             },
